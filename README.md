@@ -1,2 +1,2 @@
-# Getting-Started-with-Stan
-The repository for Happy Scientist Seminar: Getting Started with Stan
+# Happy Scientist Seminar: Getting-Started-with-Stan
+This seminar is aimed at beginners interested in learning how to use the Stan probabilistic programming language for Bayesian analysis. The seminar will provide a demonstration of the eight schools problem, a classic hierarchial model. The demonstration will include a step-by-step walkthrough of how to set up and run a Bayesian analysis using Stan, as well as tips and best practices for working with the language. 
