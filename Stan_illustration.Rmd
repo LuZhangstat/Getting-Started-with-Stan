@@ -177,14 +177,14 @@ All of the blocks are optional. The Stan program blocks that occur must occur in
 
 # Fit 8-school model in Stan
 
-## Load cmdstanr
+## Loading cmdstanr
 ```{r, comment=NA}
 library(cmdstanr)
 check_cmdstan_toolchain(fix = TRUE, quiet = TRUE)
 options(mc.cores = parallel::detectCores())
 ```
 
-## Generate data list:
+## Generating data:
 ```{r}
 data <- list(J = 8,                              # number of schools
              y = c(28, 8, -3, 7, -1, 1, 18, 12), 
@@ -219,13 +219,13 @@ fit1_stan <- mod1$sample(
     parallel_chains=4,
     iter_warmup = 1000,
     iter_sampling = 1000,
+    adapt_delta = 0.9,
     show_messages = TRUE)
 ```
 
-The `$sample()' method has a variety of arguments that can be passed. I will provide information on some of the most useful arguments. For more detailed information on all available arguments, please refer to the separate documentation page provided by the Stan Development Team. You can find the link to this page [here](https://mc-stan.org/cmdstanr/reference/model-method-sample.html).
+The `$sample()' method has a variety of arguments that can be passed. I will provide information on some of the most useful arguments. For more detailed information on all available arguments, please refer to the separate documentation page ([Run Stan's MCMC algorithms](https://mc-stan.org/cmdstanr/reference/model-method-sample.html)) provided by the Stan Development Team. 
 
-
-### Arguments of `$sample()` 
+### Arguments of `$sample()` (Excerpt from [Run Stan's MCMC algorithms](https://mc-stan.org/cmdstanr/reference/model-method-sample.html))
 
 **data**: 	(multiple options) The data to use for the variables specified in the data block of the Stan program. One of the following:
 
@@ -282,9 +282,9 @@ In order to gain a deeper understanding of arguments for adaptation in Stan, it 
 
 **window**(nonnegative integer) Initial width of slow timestep/metric adaptation interval.
 
-## Check the reported message
-Now let's run the code and check the messages reported by Stan
-```{r, eval=TRUE}
+
+**Now let's run the code and check the messages reported by Stan**
+```{r, eval=TRUE, comment=NA}
 fit1_stan <- mod1$sample(
     data = data,
     seed = 1,
@@ -296,41 +296,154 @@ fit1_stan <- mod1$sample(
     adapt_delta = 0.9,
     show_messages = TRUE)
 ```
+## Diagnosing fitting
 
-### Divergence
+### The `$cmdstan_diagnose()` method
+The `$cmdstan_diagnose()` method in CmdStan is designed to help identify potential issues with your model through the use of various diagnostic tools and checks. Now let's check the 8-school model.
 
-### E-BFMI
+```{r, comment = NA}
+fit1_stan$cmdstan_diagnose()
+```
 
-## Diagnose the fitting performance
+
+ The following guidance on diagnostics message are excerpt from [Runtime warnings and convergence problems](https://mc-stan.org/misc/warnings.html#divergent-transitions-after-warmup)
+
+* Maximum treedepth 
+
+Warnings about hitting the maximum treedepth are not as serious as other warnings. While divergent transitions, high R-hat and low ESS are a validity concern, hitting the maximum treedepth is an efficiency concern. Configuring the No-U-Turn-Sampler (the variant of HMC used by Stan) involves putting a cap on the number of simulation steps it evaluates during each iteration (for details on this see the Hamiltonian Monte Carlo Sampling chapter in the Stan manual). This is controlled through a maximum tree depth parameter max_treedepth where the maximum number of steps is 2^max_treedepth. When the maximum allowed tree depth is reached it indicates that NUTS might be terminating prematurely to avoid excessively long execution time.
+
+If this is the only warning you are getting and your ESS and R-hat diagnostics are good, it is likely safe to ignore this warning, but finding the root cause could result in a more efficient model.
+
+We do not generally recommend increasing max treedepth. In practice, the max treedepth limit being reached can be a sign of model misspecification, and to increase max treedepth can then result in just taking longer to fit a model that you don’t want to be fitting.
+
+
+
+* Divergence
+
+Stan uses Hamiltonian Monte Carlo (HMC) to explore the target distribution — the posterior defined by a Stan program + data — by simulating the evolution of a Hamiltonian system. In order to approximate the exact solution of the Hamiltonian dynamics we need to choose a step size governing how far we move each time we evolve the system forward. The step size controls the resolution of the sampler.
+
+For hard problems the curvature of the posterior can vary a lot and there can be features of the target distribution that are too small for this resolution. For example, divergences are likely if the log posterior density doesn’t have continuous derivative everywhere. Consequently the sampler misses those features and returns biased estimates. Fortunately, this mismatch of scales manifests as divergences which provide a practical diagnostic.
+
+Even a small number of divergences after warmup cannot be safely ignored if completely reliable inference is desired. But if you get only few divergences and you get good Rhat and ESS values, the resulting posterior is often good enough to move forward. There are also cases when a small number divergences without any pattern in their locations can be verified to be unimportant, but this cannot be safely assumed without a careful investigation of the model.
+
+
+* E-BFMI 
+
+You may see a warning that says some number of chains had an estimated BFMI that was too low. This implies that the adaptation phase of the Markov chains did not turn out well or the posterior has thick tails that were not well explored in the simulation. As with other warnings, if the BFMI value is just slightly below the threshold, the posterior is likely good for sanity checks but probably still not good for final inferences.
+
+
+* R-hat
+
+R-hat (sometimes also Rhat) convergence diagnostic compares the between- and within-chain estimates for model parameters and other univariate quantities of interest. If chains have not mixed well (so that between- and within-chain estimates don’t agree), R-hat is larger than 1. We recommend running at least four chains by default and in general only fully trust the sample if R-hat is less than 1.01. In early workflow, R-hat below 1.1 is often sufficient.
+
+Stan reports R-hat as the maximum of rank normalized split-R-hat and rank normalized folded-split-R-hat, which works for thick tailed distributions and is sensitive also to differences in scale.
+
+High R-hat means that the chains have not mixed well and so there is not a good reason to think of them as them being fully representative of the posterior.
+
+When there are divergent transitions in the model, high R-hat is often just another symptom of the problematic geometry that caused the divergences. If there are “maximum treedepth” warnings alongside high R-hat, it usually reflects a problematic geometry of the posterior that is hard to traverse efficiently and is often a side effect of setting very high adapt_delta in an attempt to resolve divergences. High R-hat without other warnings is commonly associated with posteriors that have multiple well-separated modes for the offending parameters, but can also arise in unimodal posteriors with difficult geometry, in case of high correlations, or in near improper posteriors.
+
+R-hat and ESSs (see below) are useful quick summaries, but for the final results, it is useful to check also Monte Carlo standard error for the quantities of interest and compare that to the domain knowledge of the required accuracy, and if it is low, then run longer chains to get more samples from the posterior.
+
+* Bulk and Tail ESS
+
+Roughly speaking, the effective sample size (ESS) of a quantity of interest captures how many independent draws contain the same amount of information as the dependent sample obtained by the MCMC algorithm. The higher the ESS the better. Stan uses R-hat adjustment to use the within- and between-chain information in computing the ESS. For example, in case of multimodal distributions with well-separated modes, this leads to an ESS estimate that is close to the number of distinct modes that are found.
+
+Bulk-ESS refers to the effective sample size based on the rank normalized draws. This does not directly compute the ESS relevant for computing the mean of the parameter, but instead computes a quantity that is well defined even if the chains do not have finite mean or variance. Overall bulk-ESS estimates the sampling efficiency for location summaries such as mean and median. Often smaller ESS would be sufficient for the desired estimation accuracy, but the estimation of ESS and convergence diagnostics themselves require higher ESS. For final results, we recommend requiring that the bulk-ESS is greater than 100 times the number of chains. For example, when running four chains, this corresponds to having a rank-normalized effective sample size of at least 400. In early workflow, ESS > 20 is often sufficient.
+
+Tail-ESS computes the minimum of the effective sample sizes (ESS) of the 5% and 95% quantiles. Tail-ESS can help diagnose problems due to different scales of the chains and slow mixing in the tails. If one or more chains has no draws below the 5% or above 95% quantiles computed from the all draws, there will be no direct way to assess that those chains are not completely failing, and thus NA (not available) can be reported for tail-ESS. > [name=Paul] We recently changed this policy in posterior because constant within chain was too conservative and turned out to return NA to oft
+
+In most cases, low bulk-ESS and tail-ESS is accompanied by large R-hat, and all recommendations for large Rhat are often useful in dealing with low ESS.
+
+R-hat and ESS are useful quick summaries, but for final results, it can useful to check also Monte Carlo standard error for the quantities of interest and compare that to the domain knowledge of the required accuracy, and if needed then sample from the posterior.
+
+The `$print()' method provides an overview of default estimators and their associated values, such as the means and quantiles of the individual marginal distributions.
+
 ```{r, eval=TRUE, comment=NA}
 fit1_stan$print()
 ```
 
-### rhat
+* **Further reading on improving the 8-school model by reparametrization** 
+[Diagnosing Biased Inference with Divergences](https://mc-stan.org/users/documentation/case-studies/divergences_and_bias.html) 
 
-### ess_bulk ess_tail
 
-### check MCMC trace plots
+### Other diagnostics methods
+The `$sampler_diagnostics()` method extracts the values of the sampler parameters (treedepth__, divergent__, etc.) in formats supported by the posterior package.
+
+```{r, comment=NA}
+fit1_stan$sampler_diagnostics()
+```
+The `$diagnostic_summary()` method will display any sampler diagnostic warnings and return a summary of diagnostics for each chain.
+```{r, comment=NA}
+fit1_stan$diagnostic_summary()
+```
+
+
+## Useful diagnostic and summary functions. 
 Load the bayesplot and posterior packages in order to access additional diagnostic and summary functions.
-
 ```{r, message=FALSE, eval=TRUE, echo=TRUE}
 library(bayesplot)
 library(posterior)
 color_scheme_set("brightblue")
 ```
 
+
+### Summaries from the posterior package
+The `$summary()` method calls summarise_draws() from the posterior package. The first argument specifies the variables to summarize and any arguments after that are passed on to `posterior::summarise_draws()` to specify which summaries to compute, whether to use multiple cores, etc.
+```{r}
+fit1_stan$summary()
+fit1_stan$summary(variables = c("theta"), "mean", "sd")
+```
+
+
+### Extracting draws
+The `$draws()` method can be used to extract the posterior draws in formats provided by the posterior package.  
+```{r}
+# default is a 3-D draws_array object from the posterior package
+# iterations x chains x variables
+draws_arr <- fit1_stan$draws() # or format="array"
+str(draws_arr)
+```
+
+### Plotting draws using the bayesplot package
+Plotting posterior distributions is as easy as passing the object returned by the `$draws()` method directly to plotting functions in the bayesplot package.
+
+**Histogram**
+```{r}
+mcmc_hist(fit1_stan$draws("theta"))
+```
+
+**MCMC traceplot**
 ```{r, eval=TRUE}
 p1 <- mcmc_trace(fit1_stan$draws("lp__"), iter1 = 1) #c("lp__", "phi[1]", "lambda[1]", "theta1[1]")
 print(p1)
 ```
 
-## Summarize the result
 
-# Improve the model fitting by reparametrization --- non-centered version
-```{r, comment=NA}
-mod2  <- cmdstan_model( "./stan/eight_schools_noncentered.stan" )
-mod2$print()
+**Scatter plot also showing divergences**
+```{r}
+color_scheme_set("darkgray")
+mcmc_scatter(
+  fit1_stan$draws(),
+  pars = c("mu", "tau"), 
+  transform = list(tau = "log"),
+  np = nuts_params(fit1_stan), 
+  np_style = scatter_style_np(div_color = "green", div_alpha = 0.8)
+)
 ```
+
+**Pairwise scatter plots showing divergences**
+```{r}
+# split the draws according to above/below median accept_stat__
+# and show approximate location of divergences (red points)
+mcmc_pairs(
+  fit1_stan$draws(),
+  pars = c("mu", "tau", "theta[1]"),
+  off_diag_args = list(size = 1, alpha = 1/3),
+  condition = pairs_condition(nuts = "accept_stat__"),
+  np = nuts_params(fit1_stan)
+)
+```
+
 
 
 # More resources for beginners
