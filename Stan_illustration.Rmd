@@ -1,0 +1,365 @@
+---
+title: "Getting Started with Stan: A Hands-On Introduction to the 8 Schools Problem"
+subtitle: 
+author: "Lu Zhang"
+date: "2023-01-26"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_collapsed: true
+    toc_depth: 3
+    number_sections: true
+    theme: lumen
+editor_options: 
+  chunk_output_type: inline
+---
+
+<style type="text/css">
+
+body{ /* Normal  */
+      font-size: 16px;
+  }
+td {  /* Table  */
+  font-size: 10px;
+}
+h1.title {
+  font-size: 30px;
+}
+h1 { /* Header 1 */
+  font-size: 25px;
+}
+h2 { /* Header 2 */
+    font-size: 20px;
+  color: Black;
+}
+h3 { /* Header 3 */
+  font-size: 18px;
+  font-family: "Times New Roman", Times, serif;
+}
+code.r{ /* Code block */
+    font-size: 12px;
+}
+pre { /* Code block - determines code spacing between lines */
+    font-size: 14px;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Stan is a state-of-the-art platform for statistical modeling and high-performance statistical computation. It works like WinBUGS and JAGS, but Stan uses a method called Hamiltonian Monte Carlo (HMC) for Markov Chain Monte Carlo (MCMC) sampling. Despite being built in C++, Stan is user-friendly and does not require any prior knowledge of C++ to utilize. The Stan language can be accessed through a variety of interfaces, including R, Python, Matlab, Julia, and Stata. In this seminar, we will explore the capabilities of Stan by conducting a Bayesian Data Analysis using the well-known example of the "eight schools" problem.
+
+
+## Installation
+
+To install Stan, search for "Stan Bayesian" on Google to access the home page. Navigate to the installation page. There are two R interfaces to Stan, Rstan and CmdStanR. According to the CmdStanR tutorial: [Getting started with CmdStanR](https://mc-stan.org/cmdstanr/articles/cmdstanr.html),  
+
+"The RStan interface (RStan package) is an in-memory interface to Stan and relies on R packages like Rcpp and inline to call C++ code from R. On the other hand, the CmdStanR interface does not directly call any C++ code from R, instead relying on the CmdStan interface behind the scenes for compilation, running algorithms, and writing results to output files."
+
+I highly recommend CmdStanR over RStan, as it is compatible with the latest versions of Stan. RStan may fall behind in terms of updates, as the process of keeping up with the latest Stan releases often entails non-trivial modifications to the RStan package and new releases on CRAN for both RStan and StanHeaders.
+
+Select the "CmdStanR" link for information on how to install it. Within R, to install CmdStanR, copy the commands from the website and run in R. It takes a while to complete the installation. Restart R to start using stan. Since cmdstanr is an r wrapper of CmdStanR, you will need to install CmdStanR in addition. 
+
+
+# Example: 8 Schools problem
+The eight schools problem is a famous example of a hierarchical model in statistics illustrated in Chapter 5 of Gelman's Bayesian Data Analysis (BDA) book. The story is about a study for the Education Testing Service to analyze the effects of special coaching programs on test scores. There are 8 different schools experimented with an SAT coaching experiment. In each school, the estimated coaching effect $y_j$ and its standard error $\sigma_j$ were obtained by an analysis of covariance adjustment appropriate for a completely randomized experiment. (Check BDA for more details)
+
+Here are the data:
+```{r data, comment=NA}
+Schools <- data.frame(row.names=c("A","B","C","D","E","F","G","H"),
+                      effect = c(28, 8, -3, 7, -1, 1, 18, 12),
+                      see = c(15, 10, 16, 11, 9, 11, 10, 18))
+
+Schools
+```
+
+The goal of the analysis is to estimate the average treatment effect of a coaching program on student test scores. 
+
+## Modeling of the 8-school problem
+Define $\theta_j : j= 1, \ldots, 8$ as the treatment effect in school $j$.
+Let $\mu$ and $\tau$ be mean and standard deviation of the treatment effects $\theta_j$.
+We build a hierarchical model: 
+$$
+\begin{aligned}
+y_j &= \theta_j + \epsilon_j \;, \; \epsilon_j \sim \mbox{N}(0, \sigma_j^2) \\
+\theta_j &\sim \mbox{N}(\mu, \tau^2)\\
+\end{aligned}
+$$
+
+For hyper parameters $\mu$ and $\tau$, we assign a normal prior for $\mu$ and a half-Cauchy prior for $\tau$. 
+$$
+\mu \sim \mbox{N}(0, 5^2)\; , \; \tau \sim \mbox{Cauchy}^+(0, 5)
+$$
+The Stan development team has created an informative Wiki page that guides users on how to choose appropriate priors when building Bayesian models. 
+
+[Stan Prior Choice Recommendations Wiki page](https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations)
+
+I highly recommend consulting this resource when constructing your own models, as it will provide valuable insights and best practices.
+
+
+
+# Stan’s program blocks 
+The Stan modeling language uses a block structure to organize model code. The three main blocks in a Stan program are the `data` block, the `parameters` block, and the `model` block.
+
+## The `data` block
+The `data` block is where the data that the model will be fitted to is defined. In here we express how the data list should look like, with data type and restrictions. Inside it, number of schools J is declared as an integer, with the restriction that it can not be lower than 0. A semicolon at the end of each line means that the command has ended. This semicolon is required at the end of every command in Stan. To make a comment, we use double slash. Now, y is a vector of real numbers with length J and sigma is a vector of real numbers with length J with the restriction that lower value of standard errors sigma can be 0. 
+
+```{r, echo=TRUE, eval=FALSE}
+data {
+  int <lower=0> J; // number of schools
+  real y[J]; // estimated treatment
+  real<lower=0> sigma[J]; // std of estimated effect
+}
+```
+
+## The `parameters` block
+The `parameters` block is where we define the sampling space. Here we put the parameters of interest. Mean mu, population standard deviation tau are scalar with tau having a non-negative restriction. And theta is a vector with J elements. 
+
+```{r, echo=TRUE, eval=FALSE}
+parameters {
+  real theta[J]; // treatment effect in school j
+  real mu; // hyper-parameter of mean
+  real<lower=0> tau; // hyper-parameter of sdv
+}
+```
+
+## The `model` block
+The `model` block describes the model; that includes priors and likelihoods.
+Here y is modeled by normal with mean theta and standard deviation sigma, theta is hierarchically modeled by normal with mean mu and standard deviation tau. And the priors for tau and mu are half-Cauchy and normal, respectively. 
+
+```{r, echo=TRUE, eval=FALSE}
+model {
+  tau ~ cauchy(0, 5); // a non-informative prior
+  theta ~ normal(mu, tau);
+  y ~ normal(theta, sigma);
+  mu ~ normal(0, 5);
+}
+```
+
+Putting all of these blocks together defines a full Stan program. 
+
+```{r, echo=TRUE, eval=TRUE, comment=NA}
+writeLines(readLines("./stan/eight_schools_centered.stan"))
+```
+
+## Overview of Stan’s program blocks
+In addition to the `data`, `parameter`, and `model` blocks, Stan offers a wider range of program blocks. A complete list of these named blocks can be found in the following skeletal Stan program.
+
+```{r, echo=TRUE, eval=FALSE}
+functions {
+  // ... function declarations and definitions ...
+}
+data {
+  // ... declarations ...
+}
+transformed data {
+   // ... declarations ... statements ...
+}
+parameters {
+   // ... declarations ...
+}
+transformed parameters {
+   // ... declarations ... statements ...
+}
+model {
+   // ... declarations ... statements ...
+}
+generated quantities {
+   // ... declarations ... statements ...
+}
+```
+The function-definition block contains user-defined functions. The data block declares the required data for the model. The transformed data block allows the definition of constants and transforms of the data. The parameters block declares the model’s parameters — the unconstrained version of the parameters is what’s sampled or optimized. The transformed parameters block allows variables to be defined in terms of data and parameters that may be used later and will be saved. The model block is where the log probability function is defined. The generated quantities block allows derived quantities based on parameters, data, and optionally (pseudo) random number generation.
+
+All of the blocks are optional. The Stan program blocks that occur must occur in the order presented in the skeletal program above.
+
+# Fit 8-school model in Stan
+
+## Load cmdstanr
+```{r, comment=NA}
+library(cmdstanr)
+check_cmdstan_toolchain(fix = TRUE, quiet = TRUE)
+options(mc.cores = parallel::detectCores())
+```
+
+## Generate data list:
+```{r}
+data <- list(J = 8,                              # number of schools
+             y = c(28, 8, -3, 7, -1, 1, 18, 12), 
+             sigma = c(15, 10, 16, 11, 9, 11, 10, 18))
+```
+
+## Compiling the model
+The `cmdstan_model()` function creates a new `CmdStanModel` object from a file containing a Stan program. In the following chunk the `CmdStanModel` object is named `mod1`. This step will also generate a compiled executable under the same path of the ".stan" file. 
+```{r, message=TRUE, warning=TRUE, results='markup', include=TRUE}
+mod1  <- cmdstan_model( "./stan/eight_schools_centered.stan" )
+```
+
+Stan will not recompile the model unless the Stan code is changed. 
+```{r}
+mod1  <- cmdstan_model( "./stan/eight_schools_centered.stan" )
+```
+For `CmdStanModel` objects, methods are accessed using the `$` operator. The Stan program can be printed using the `$print()` method:
+```{r, comment=NA}
+mod1$print()
+```
+
+## Running MCMC 
+The `$sample()` method for CmdStanModel objects runs Stan’s default MCMC algorithm. 
+
+Below shows the code for running sampling with cmdstanr.
+```{r, echo=TRUE, eval=FALSE}
+fit1_stan <- mod1$sample(
+    data = data,
+    seed = 1,
+    refresh = 500,          # print update every 500 iters
+    chains=4, 
+    parallel_chains=4,
+    iter_warmup = 1000,
+    iter_sampling = 1000,
+    show_messages = TRUE)
+```
+
+The `$sample()' method has a variety of arguments that can be passed. I will provide information on some of the most useful arguments. For more detailed information on all available arguments, please refer to the separate documentation page provided by the Stan Development Team. You can find the link to this page [here](https://mc-stan.org/cmdstanr/reference/model-method-sample.html).
+
+
+### Arguments of `$sample()` 
+
+**data**: 	(multiple options) The data to use for the variables specified in the data block of the Stan program. One of the following:
+
+* A named list of R objects with the names corresponding to variables declared in the data block of the Stan program. Internally this list is then written to JSON for CmdStan using write_stan_json(). See write_stan_json() for details on the conversions performed on R objects before they are passed to Stan.
+
+* A path to a data file compatible with CmdStan (JSON or R dump). See the appendices in the CmdStan guide for details on using these formats.
+
+* NULL or an empty list if the Stan program has no data block.
+
+**seed**:  (positive integer(s)) A seed for the (P)RNG to pass to CmdStan. In the case of multi-chain sampling the single seed will automatically be augmented by the the run (chain) ID so that each chain uses a different `seed`. The exception is the transformed data block, which defaults to using same seed for all chains so that the same data is generated for all chains if RNG functions are used. The only time seed should be specified as a vector (one element per chain) is if RNG functions are used in transformed data and the goal is to generate different data for each chain.
+
+**refresh**:  (non-negative integer) The number of iterations between printed screen updates. If $refresh = 0$, only error messages will be printed.
+
+**init**: (multiple options) The initialization method to use for the variables declared in the parameters block of the Stan program. One of the following:
+
+* A real number $x>0$. This initializes all parameters randomly between $[-x,x]$ on the unconstrained parameter space.;
+
+* The number 0. This initializes all parameters to 0;
+
+* A character vector of paths (one per chain) to JSON or Rdump files containing initial values for all or some parameters. See 'write_stan_json()' to write R objects to JSON files compatible with CmdStan.
+
+* A list of lists containing initial values for all or some parameters. For MCMC the list should contain a sublist for each chain. For optimization and variational inference there should be just one sublist. The sublists should have named elements corresponding to the parameters for which you are specifying initial values. See Examples.
+
+* A function that returns a single list with names corresponding to the parameters for which you are specifying initial values. The function can take no arguments or a single argument chain_id. For MCMC, if the function has argument chain_id it will be supplied with the chain id (from 1 to number of chains) when called to generate the initial values. See Examples.
+
+**chains**:	(positive integer) The number of Markov chains to run. The default is 4.
+
+**parallel_chains**:  (positive integer) The maximum number of MCMC chains to run in parallel. If parallel_chains is not specified then the default is to look for the option "mc.cores", which can be set for an entire R session by options(mc.cores=value). If the "mc.cores" option has not been set then the default is 1.
+
+**iter_warmup**:  (positive integer) The number of warmup iterations to run per chain. Note: in the CmdStan User's Guide this is referred to as num_warmup. The default is 1000. 
+
+**iter_sampling**:  (positive integer) The number of post-warmup iterations to run per chain. Note: in the CmdStan User's Guide this is referred to as num_samples. The default is 1000.
+
+
+### Arguments for adaptation in Stan
+
+In order to gain a deeper understanding of arguments for adaptation in Stan, it is helpful to know the tuning parameters of HMC sampling algorithms, how Stan adjusts them during the warmup phase [15.2 HMC algorithm parameters](https://mc-stan.org/docs/reference-manual/hmc-algorithm-parameters.html), and how the No-U-Turn Hamiltonian Monte Carlo (NUTS) works [(3.1 No-U-Turn Hamiltonian Monte Carlo)](http://www.stat.columbia.edu/~gelman/research/published/nuts.pdf)
+
+
+**max_treedepth**:  (positive integer) The maximum allowed tree depth for the NUTS engine. See the Tree Depth section of the CmdStan User's Guide for more details. The default is 10.
+
+
+**adapt_engaged**:  (logical) Do warmup adaptation? The default is TRUE. If a precomputed inverse metric is specified via the inv_metric argument (or metric_file) then, if adapt_engaged=TRUE, Stan will use the provided inverse metric just as an initial guess during adaptation. To turn off adaptation when using a precomputed inverse metric set adapt_engaged=FALSE.
+
+**adapt_delta**:  (real in (0,1)) The adaptation target acceptance statistic. The default is 0.8.
+
+**step_size**: (positive real) The initial step size for the discrete approximation to continuous Hamiltonian dynamics. This is further tuned during warmup.
+
+**metric**: (string) One of "diag_e", "dense_e", or "unit_e", specifying the geometry of the base manifold. See the Euclidean Metric section of the CmdStan User's Guide for more details. To specify a precomputed (inverse) metric, see the inv_metric argument below. The default is "diag_e"
+
+**init_buffer**: (nonnegative integer) Width of initial fast timestep adaptation interval during warmup.
+
+**term_buffer**:  (nonnegative integer) Width of final fast timestep adaptation interval during warmup.
+
+**window**(nonnegative integer) Initial width of slow timestep/metric adaptation interval.
+
+## Check the reported message
+Now let's run the code and check the messages reported by Stan
+```{r, eval=TRUE}
+fit1_stan <- mod1$sample(
+    data = data,
+    seed = 1,
+    refresh = 500,          # print update every 500 iters
+    chains=4, 
+    parallel_chains=4,
+    iter_warmup = 1000,
+    iter_sampling = 1000,
+    adapt_delta = 0.9,
+    show_messages = TRUE)
+```
+
+### Divergence
+
+### E-BFMI
+
+## Diagnose the fitting performance
+```{r, eval=TRUE, comment=NA}
+fit1_stan$print()
+```
+
+### rhat
+
+### ess_bulk ess_tail
+
+### check MCMC trace plots
+Load the bayesplot and posterior packages in order to access additional diagnostic and summary functions.
+
+```{r, message=FALSE, eval=TRUE, echo=TRUE}
+library(bayesplot)
+library(posterior)
+color_scheme_set("brightblue")
+```
+
+```{r, eval=TRUE}
+p1 <- mcmc_trace(fit1_stan$draws("lp__"), iter1 = 1) #c("lp__", "phi[1]", "lambda[1]", "theta1[1]")
+print(p1)
+```
+
+## Summarize the result
+
+# Improve the model fitting by reparametrization --- non-centered version
+```{r, comment=NA}
+mod2  <- cmdstan_model( "./stan/eight_schools_noncentered.stan" )
+mod2$print()
+```
+
+
+# More resources for beginners
+There are many resources available for beginners to learn Stan. Some of the most helpful resources include:
+
+1. The Stan website [(https://mc-stan.org/)](https://mc-stan.org/), which provides detailed documentation, tutorials, and examples of how to use Stan.
+
+2. The Stan User's Guide [(https://mc-stan.org/users/documentation/)](https://mc-stan.org/users/documentation/), which is an in-depth guide to the Stan programming language and the various features of the software.
+
+3. The Stan Forums [(https://discourse.mc-stan.org/)](https://discourse.mc-stan.org/), which are a community-driven platform for discussing Stan and getting help with Stan-related questions.
+
+4. Online courses and tutorials, such as those offered by DataCamp [(https://www.datacamp.com/courses/introduction-to-stan)](https://www.datacamp.com/courses/introduction-to-stan) and Coursera [(https://www.coursera.org/courses?query=stan)](https://www.coursera.org/courses?query=stan).
+
+5. Books and articles on Stan, such as "Bayesian Data Analysis" by Andrew Gelman et al. and "Doing Bayesian Data Analysis" by John Kruschke.
+
+In general, the best way to learn Stan is to start by working through some of the tutorials and examples provided by the Stan website, and then to practice by working on your own projects and seeking help from the Stan community when you need it. As you become more comfortable with the software, you can explore more advanced features and techniques, such as hierarchical modeling and deep learning.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
