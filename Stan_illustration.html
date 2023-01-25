@@ -1614,18 +1614,17 @@ of a coaching program on student test scores.</p>
 <p>Define <span class="math inline">\(\theta_j : j= 1, \ldots,
 8\)</span> as the treatment effect in school <span class="math inline">\(j\)</span>. Let <span class="math inline">\(\mu\)</span> and <span class="math inline">\(\tau\)</span> be mean and standard deviation of
 the treatment effects <span class="math inline">\(\theta_j\)</span>. We
-build a hierarchical model: <span class="math display">\[
-\begin{aligned}
+build a hierarchical model:</p>
+<p><span class="math display">\[\begin{align}
 y_j &amp;= \theta_j + \epsilon_j \;, \; \epsilon_j \sim \mbox{N}(0,
 \sigma_j^2) \\
-\theta_j &amp;\sim \mbox{N}(\mu, \tau^2)\\
-\end{aligned}
-\]</span></p>
+\theta_j &amp;\sim \mbox{N}(\mu, \tau^2)
+\end{align}\]</span></p>
 <p>For hyper parameters <span class="math inline">\(\mu\)</span> and
 <span class="math inline">\(\tau\)</span>, we assign a normal prior for
 <span class="math inline">\(\mu\)</span> and a half-Cauchy prior for
 <span class="math inline">\(\tau\)</span>. <span class="math display">\[
-\mu \sim \mbox{N}(0, 5^2)\; , \; \tau \sim \mbox{Cauchy}^+(0, 5)
+\mu \sim \mbox{N}(0, 5^2)\; , \; \tau \sim \mbox{Cauchy}^+(0, 5^2)
 \]</span> The Stan development team has created an informative Wiki page
 that guides users on how to choose appropriate priors when building
 Bayesian models.</p>
@@ -1970,11 +1969,11 @@ Chain 1 finished in 0.1 seconds.
 Chain 2 finished in 0.1 seconds.
 Chain 3 finished in 0.1 seconds.
 Chain 4 Iteration: 2000 / 2000 [100%]  (Sampling) 
-Chain 4 finished in 0.2 seconds.
+Chain 4 finished in 0.3 seconds.
 
 All 4 chains finished successfully.
-Mean chain execution time: 0.1 seconds.
-Total execution time: 0.4 seconds.</code></pre>
+Mean chain execution time: 0.2 seconds.
+Total execution time: 0.5 seconds.</code></pre>
 <pre><code>Warning: 83 of 4000 (2.0%) transitions ended with a divergence.
 See https://mc-stan.org/misc/warnings for details.</code></pre>
 <pre><code>Warning: 2 of 4 chains had an E-BFMI less than 0.2.
@@ -1992,7 +1991,7 @@ help identify potential issues with your model through the use of
 various diagnostic tools and checks. Now let’s check the 8-school
 model.</p>
 <pre class="r"><code>fit1_stan$cmdstan_diagnose()</code></pre>
-<pre><code>Processing csv files: /tmp/RtmpYYvM5a/eight_schools_centered-202301161550-1-761850.csv, /tmp/RtmpYYvM5a/eight_schools_centered-202301161550-2-761850.csv, /tmp/RtmpYYvM5a/eight_schools_centered-202301161550-3-761850.csv, /tmp/RtmpYYvM5a/eight_schools_centered-202301161550-4-761850.csv
+<pre><code>Processing csv files: /tmp/Rtmp6U9MsV/eight_schools_centered-202301251235-1-54f4dc.csv, /tmp/Rtmp6U9MsV/eight_schools_centered-202301251235-2-54f4dc.csv, /tmp/Rtmp6U9MsV/eight_schools_centered-202301251235-3-54f4dc.csv, /tmp/Rtmp6U9MsV/eight_schools_centered-202301251235-4-54f4dc.csv
 
 Checking sampler transitions treedepth.
 Treedepth satisfactory for all transitions.

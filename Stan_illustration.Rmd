@@ -82,16 +82,18 @@ The goal of the analysis is to estimate the average treatment effect of a coachi
 Define $\theta_j : j= 1, \ldots, 8$ as the treatment effect in school $j$.
 Let $\mu$ and $\tau$ be mean and standard deviation of the treatment effects $\theta_j$.
 We build a hierarchical model: 
-$$
-\begin{aligned}
+
+\begin{align}
 y_j &= \theta_j + \epsilon_j \;, \; \epsilon_j \sim \mbox{N}(0, \sigma_j^2) \\
-\theta_j &\sim \mbox{N}(\mu, \tau^2)\\
-\end{aligned}
-$$
+\theta_j &\sim \mbox{N}(\mu, \tau^2)
+\end{align} 
+
+
+
 
 For hyper parameters $\mu$ and $\tau$, we assign a normal prior for $\mu$ and a half-Cauchy prior for $\tau$. 
 $$
-\mu \sim \mbox{N}(0, 5^2)\; , \; \tau \sim \mbox{Cauchy}^+(0, 5)
+\mu \sim \mbox{N}(0, 5^2)\; , \; \tau \sim \mbox{Cauchy}^+(0, 5^2)
 $$
 The Stan development team has created an informative Wiki page that guides users on how to choose appropriate priors when building Bayesian models. 
 
