@@ -1,6 +1,5 @@
 library(cmdstanr)
 check_cmdstan_toolchain(fix = TRUE, quiet = TRUE)
-options(mc.cores = parallel::detectCores())
 
 
 # Generating data:

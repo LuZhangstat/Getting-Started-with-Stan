@@ -148,7 +148,7 @@ writeLines(readLines("./stan/eight_schools_centered.stan"))
 ```
 
 ## Overview of Stan’s program blocks
-In addition to the `data`, `parameter`, and `model` blocks, Stan offers a wider range of program blocks. A complete list of these named blocks can be found in the following skeletal Stan program.
+In addition to the `data`, `parameters`, and `model` blocks, Stan offers a wider range of program blocks. A complete list of these named blocks can be found in the following skeletal Stan program.
 
 ```{r, echo=TRUE, eval=FALSE}
 functions {
@@ -183,7 +183,6 @@ All of the blocks are optional. The Stan program blocks that occur must occur in
 ```{r, comment=NA}
 library(cmdstanr)
 check_cmdstan_toolchain(fix = TRUE, quiet = TRUE)
-options(mc.cores = parallel::detectCores())
 ```
 
 ## Generating data:
@@ -350,7 +349,7 @@ Roughly speaking, the effective sample size (ESS) of a quantity of interest capt
 
 Bulk-ESS refers to the effective sample size based on the rank normalized draws. This does not directly compute the ESS relevant for computing the mean of the parameter, but instead computes a quantity that is well defined even if the chains do not have finite mean or variance. Overall bulk-ESS estimates the sampling efficiency for location summaries such as mean and median. Often smaller ESS would be sufficient for the desired estimation accuracy, but the estimation of ESS and convergence diagnostics themselves require higher ESS. For final results, we recommend requiring that the bulk-ESS is greater than 100 times the number of chains. For example, when running four chains, this corresponds to having a rank-normalized effective sample size of at least 400. In early workflow, ESS > 20 is often sufficient.
 
-Tail-ESS computes the minimum of the effective sample sizes (ESS) of the 5% and 95% quantiles. Tail-ESS can help diagnose problems due to different scales of the chains and slow mixing in the tails. If one or more chains has no draws below the 5% or above 95% quantiles computed from the all draws, there will be no direct way to assess that those chains are not completely failing, and thus NA (not available) can be reported for tail-ESS. > [name=Paul] We recently changed this policy in posterior because constant within chain was too conservative and turned out to return NA to oft
+Tail-ESS computes the minimum of the effective sample sizes (ESS) of the 5% and 95% quantiles. Tail-ESS can help diagnose problems due to different scales of the chains and slow mixing in the tails. 
 
 In most cases, low bulk-ESS and tail-ESS is accompanied by large R-hat, and all recommendations for large Rhat are often useful in dealing with low ESS.
 
@@ -453,11 +452,15 @@ There are many resources available for beginners to learn Stan. Some of the most
 
 2. The Stan User's Guide [(https://mc-stan.org/users/documentation/)](https://mc-stan.org/users/documentation/), which is an in-depth guide to the Stan programming language and the various features of the software.
 
-3. The Stan Forums [(https://discourse.mc-stan.org/)](https://discourse.mc-stan.org/), which are a community-driven platform for discussing Stan and getting help with Stan-related questions.
+3. The Stan Case Studies [(https://mc-stan.org/users/documentation/case-studies.html)](https://mc-stan.org/users/documentation/case-studies.html), which collects case studies to reflect best practices in Bayesian methodology and Stan programming.
 
-4. Online courses and tutorials, such as those offered by DataCamp [(https://www.datacamp.com/courses/introduction-to-stan)](https://www.datacamp.com/courses/introduction-to-stan) and Coursera [(https://www.coursera.org/courses?query=stan)](https://www.coursera.org/courses?query=stan).
+4. The Stan Forums [(https://discourse.mc-stan.org/)](https://discourse.mc-stan.org/), which are a community-driven platform for discussing Stan and getting help with Stan-related questions.
 
-5. Books and articles on Stan, such as "Bayesian Data Analysis" by Andrew Gelman et al. and "Doing Bayesian Data Analysis" by John Kruschke.
+5. Online courses and tutorials, such as those offered by DataCamp [(https://www.datacamp.com/courses/introduction-to-stan)](https://www.datacamp.com/courses/introduction-to-stan) and Coursera [(https://www.coursera.org/courses?query=stan)](https://www.coursera.org/courses?query=stan).
+
+6. Books and articles on Stan, such as "Bayesian Data Analysis" by Andrew Gelman et al. and "Doing Bayesian Data Analysis" by John Kruschke.
+
+
 
 In general, the best way to learn Stan is to start by working through some of the tutorials and examples provided by the Stan website, and then to practice by working on your own projects and seeking help from the Stan community when you need it. As you become more comfortable with the software, you can explore more advanced features and techniques, such as hierarchical modeling and deep learning.
 
