@@ -36,3 +36,5 @@ fit1_stan$sampler_diagnostics()
 fit1_stan$diagnostic_summary()
 
 
+mod2  <- cmdstan_model( "./stan/eight_schools_noncentered.stan" )
+

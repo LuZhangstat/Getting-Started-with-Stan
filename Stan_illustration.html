@@ -1656,8 +1656,8 @@ J with the restriction that lower value of standard errors sigma can be
 0.</p>
 <pre class="r"><code>data {
   int &lt;lower=0&gt; J; // number of schools
-  real y[J]; // estimated treatment
-  real&lt;lower=0&gt; sigma[J]; // std of estimated effect
+  array[J] real y; // estimated treatment
+  array[J] real&lt;lower=0&gt; sigma; // std of estimated effect
 }</code></pre>
 </div>
 <div id="the-parameters-block" class="section level2" number="2.2">
@@ -1668,7 +1668,7 @@ space. Here we put the parameters of interest. Mean mu, population
 standard deviation tau are scalar with tau having a non-negative
 restriction. And theta is a vector with J elements.</p>
 <pre class="r"><code>parameters {
-  real theta[J]; // treatment effect in school j
+  array[J] real theta; // treatment effect in school j
   real mu; // hyper-parameter of mean
   real&lt;lower=0&gt; tau; // hyper-parameter of sdv
 }</code></pre>
@@ -1691,12 +1691,12 @@ half-Cauchy and normal, respectively.</p>
 <pre class="r"><code>writeLines(readLines(&quot;./stan/eight_schools_centered.stan&quot;))</code></pre>
 <pre><code>data {
   int &lt;lower=0&gt; J; // number of schools
-  real y[J]; // estimated treatment
-  real&lt;lower=0&gt; sigma[J]; // std of estimated effect
+  array[J] real y; // estimated treatment
+  array[J] real&lt;lower=0&gt; sigma; // std of estimated effect
 }
 
 parameters {
-  real theta[J]; // treatment effect in school j
+  array[J] real theta; // treatment effect in school j
   real mu; // hyper-parameter of mean
   real&lt;lower=0&gt; tau; // hyper-parameter of sdv
 }
@@ -1780,19 +1780,18 @@ under the same path of the “.stan” file.</p>
 <pre class="r"><code>mod1  &lt;- cmdstan_model( &quot;./stan/eight_schools_centered.stan&quot; )</code></pre>
 <p>Stan will not recompile the model unless the Stan code is
 changed.</p>
-<pre class="r"><code>mod1  &lt;- cmdstan_model( &quot;./stan/eight_schools_centered.stan&quot; )</code></pre>
 <p>For <code>CmdStanModel</code> objects, methods are accessed using the
 <code>$</code> operator. The Stan program can be printed using the
 <code>$print()</code> method:</p>
 <pre class="r"><code>mod1$print()</code></pre>
 <pre><code>data {
   int &lt;lower=0&gt; J; // number of schools
-  real y[J]; // estimated treatment
-  real&lt;lower=0&gt; sigma[J]; // std of estimated effect
+  array[J] real y; // estimated treatment
+  array[J] real&lt;lower=0&gt; sigma; // std of estimated effect
 }
 
 parameters {
-  real theta[J]; // treatment effect in school j
+  array[J] real theta; // treatment effect in school j
   real mu; // hyper-parameter of mean
   real&lt;lower=0&gt; tau; // hyper-parameter of sdv
 }
@@ -1969,11 +1968,11 @@ Chain 1 finished in 0.1 seconds.
 Chain 2 finished in 0.1 seconds.
 Chain 3 finished in 0.1 seconds.
 Chain 4 Iteration: 2000 / 2000 [100%]  (Sampling) 
-Chain 4 finished in 0.3 seconds.
+Chain 4 finished in 0.2 seconds.
 
 All 4 chains finished successfully.
-Mean chain execution time: 0.2 seconds.
-Total execution time: 0.5 seconds.</code></pre>
+Mean chain execution time: 0.1 seconds.
+Total execution time: 0.4 seconds.</code></pre>
 <pre><code>Warning: 83 of 4000 (2.0%) transitions ended with a divergence.
 See https://mc-stan.org/misc/warnings for details.</code></pre>
 <pre><code>Warning: 2 of 4 chains had an E-BFMI less than 0.2.
@@ -1991,7 +1990,7 @@ help identify potential issues with your model through the use of
 various diagnostic tools and checks. Now let’s check the 8-school
 model.</p>
 <pre class="r"><code>fit1_stan$cmdstan_diagnose()</code></pre>
-<pre><code>Processing csv files: /tmp/Rtmp6U9MsV/eight_schools_centered-202301251235-1-54f4dc.csv, /tmp/Rtmp6U9MsV/eight_schools_centered-202301251235-2-54f4dc.csv, /tmp/Rtmp6U9MsV/eight_schools_centered-202301251235-3-54f4dc.csv, /tmp/Rtmp6U9MsV/eight_schools_centered-202301251235-4-54f4dc.csv
+<pre><code>Processing csv files: /tmp/RtmpHotJJH/eight_schools_centered-202301251622-1-9030ae.csv, /tmp/RtmpHotJJH/eight_schools_centered-202301251622-2-9030ae.csv, /tmp/RtmpHotJJH/eight_schools_centered-202301251622-3-9030ae.csv, /tmp/RtmpHotJJH/eight_schools_centered-202301251622-4-9030ae.csv
 
 Checking sampler transitions treedepth.
 Treedepth satisfactory for all transitions.

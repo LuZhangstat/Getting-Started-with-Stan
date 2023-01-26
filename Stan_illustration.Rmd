@@ -112,8 +112,8 @@ The `data` block is where the data that the model will be fitted to is defined. 
 ```{r, echo=TRUE, eval=FALSE}
 data {
   int <lower=0> J; // number of schools
-  real y[J]; // estimated treatment
-  real<lower=0> sigma[J]; // std of estimated effect
+  array[J] real y; // estimated treatment
+  array[J] real<lower=0> sigma; // std of estimated effect
 }
 ```
 
@@ -122,7 +122,7 @@ The `parameters` block is where we define the sampling space. Here we put the pa
 
 ```{r, echo=TRUE, eval=FALSE}
 parameters {
-  real theta[J]; // treatment effect in school j
+  array[J] real theta; // treatment effect in school j
   real mu; // hyper-parameter of mean
   real<lower=0> tau; // hyper-parameter of sdv
 }
@@ -200,9 +200,7 @@ mod1  <- cmdstan_model( "./stan/eight_schools_centered.stan" )
 ```
 
 Stan will not recompile the model unless the Stan code is changed. 
-```{r}
-mod1  <- cmdstan_model( "./stan/eight_schools_centered.stan" )
-```
+
 For `CmdStanModel` objects, methods are accessed using the `$` operator. The Stan program can be printed using the `$print()` method:
 ```{r, comment=NA}
 mod1$print()
