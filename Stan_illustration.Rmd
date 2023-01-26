@@ -388,7 +388,7 @@ color_scheme_set("brightblue")
 
 ### Summaries from the posterior package
 The `$summary()` method calls summarise_draws() from the posterior package. The first argument specifies the variables to summarize and any arguments after that are passed on to `posterior::summarise_draws()` to specify which summaries to compute, whether to use multiple cores, etc.
-```{r}
+```{r, comment=NA}
 fit1_stan$summary()
 fit1_stan$summary(variables = c("theta"), "mean", "sd")
 ```
@@ -462,7 +462,13 @@ There are many resources available for beginners to learn Stan. Some of the most
 
 
 
-In general, the best way to learn Stan is to start by working through some of the tutorials and examples provided by the Stan website, and then to practice by working on your own projects and seeking help from the Stan community when you need it. As you become more comfortable with the software, you can explore more advanced features and techniques, such as hierarchical modeling and deep learning.
+In general, the best way to learn Stan is to start by working through some of the tutorials and examples provided by the Stan website, and then to practice by working on your own projects and seeking help from the Stan community when you need it.
+
+# Original Computing Environment
+```{r, comment=NA}
+devtools::session_info("cmdstanr")
+```
+
 
 
 
